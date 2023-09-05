@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         webSettings.domStorageEnabled = true
 
         webView.webViewClient = InternalWebViewClient()
-        webView.loadUrl("https://freeway-web.vercel.app/")
+        webView.loadUrl("http://freewaykr.s3-website.ap-northeast-2.amazonaws.com/")
         webView.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: PermissionRequest) {
                 request.grant(request.resources)
@@ -60,6 +60,9 @@ class MainActivity : ComponentActivity() {
             val url = request.url
             return if (url != null && url.scheme == "tel") {
                 startActivity(Intent(Intent.ACTION_DIAL, Uri.parse(url.toString())))
+                true
+            } else if (url != null && url.scheme == "mailto") {
+                view.context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url.toString())))
                 true
             } else {
                 super.shouldOverrideUrlLoading(view, request)
