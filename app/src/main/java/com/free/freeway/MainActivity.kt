@@ -8,28 +8,30 @@ import android.net.Uri
 import android.os.Bundle
 import android.webkit.*
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 
 class MainActivity : ComponentActivity() {
 
-    //    private var requestPermissionLauncher: ActivityResultLauncher<String>? = null
-    private val LOCATION_PERMISSION_REQUEST_CODE = 1
-    private val MICROPHONE_PERMISSION_REQUEST_CODE = 2
+    private val locationPermissionRequestCode = 1
+    private var geolocationCallback: GeolocationPermissions.Callback? = null
+    private var microphonePermissionRequest: PermissionRequest? = null
+
+    private val requestMicrophonePermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                microphonePermissionRequest?.grant(microphonePermissionRequest?.resources)
+            } else {
+                print("마이크 권한 거절됨")
+            }
+        }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        /* requestPermissionLauncher = registerForActivityResult(
-             RequestPermission()
-         ) { isGranted: Boolean ->
-             if (!isGranted) {
-                 println("마이크 권한을 허용하지 않으면 음성 검색 기능을 사용하실 수 없습니다!")
-             }
-         }*/
 
         val webView = findViewById<WebView>(R.id.web_view)
 
@@ -45,6 +47,8 @@ class MainActivity : ComponentActivity() {
                 origin: String,
                 callback: GeolocationPermissions.Callback
             ) {
+                geolocationCallback = callback
+
                 val permission = Manifest.permission.ACCESS_FINE_LOCATION
                 if (ContextCompat.checkSelfPermission(
                         this@MainActivity,
@@ -54,17 +58,17 @@ class MainActivity : ComponentActivity() {
                     ActivityCompat.requestPermissions(
                         this@MainActivity,
                         arrayOf(permission),
-                        LOCATION_PERMISSION_REQUEST_CODE
+                        locationPermissionRequestCode
                     )
-                    print("위치 권한 허용")
                 } else {
-                    println("이미 위치 권한 허용됨")
-                    callback.invoke(origin, true, false)
+                    geolocationCallback?.invoke(origin, true, false)
                 }
             }
 
             override fun onPermissionRequest(request: PermissionRequest) {
                 if (request.resources.contains("android.webkit.resource.AUDIO_CAPTURE")) {
+                    microphonePermissionRequest = request
+
                     print("마이크 권한 요청")
                     val permission = Manifest.permission.RECORD_AUDIO
                     if (ContextCompat.checkSelfPermission(
@@ -72,11 +76,7 @@ class MainActivity : ComponentActivity() {
                             permission
                         ) != PackageManager.PERMISSION_GRANTED
                     ) {
-                        ActivityCompat.requestPermissions(
-                            this@MainActivity,
-                            arrayOf(permission),
-                            MICROPHONE_PERMISSION_REQUEST_CODE
-                        )
+                        requestMicrophonePermissionLauncher.launch(permission)
                         print("마이크 권한 허용")
                     } else {
                         print("이미 마이크 권한 허용")
@@ -85,21 +85,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-
-        print("크롬 설정 끝")
-
-//        requestAudioPermission()
     }
-
-    /*private fun requestAudioPermission() {
-        if (ContextCompat.checkSelfPermission(
-                this, Manifest.permission.RECORD_AUDIO
-            )
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissionLauncher!!.launch(Manifest.permission.RECORD_AUDIO)
-        }
-    }*/
 
     private inner class InternalWebViewClient : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
